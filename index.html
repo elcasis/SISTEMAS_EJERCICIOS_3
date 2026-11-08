@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#000000" />
+  <title>SO Tema 3 · Procesos e Hilos</title>
+  <style>
+    :root {
+      --font-scale: 1;
+      --bg-pure: #000000;
+      --bg-card: #0c0c0f;
+      --bg-elevated: #16161d;
+      --bg-input: #1f1f29;
+      --border: #262635;
+      --border-light: #36364a;
+      --text-main: #f4f4f8;
+      --text-muted: #9898ad;
+      --accent: #0a84ff;
+      --accent-soft: rgba(10, 132, 255, 0.16);
+      --green: #30d158;
+      --green-soft: rgba(48, 209, 88, 0.16);
+      --amber: #ffd60a;
+      --amber-soft: rgba(255, 214, 10, 0.16);
+      --red: #ff453a;
+      --red-soft: rgba(255, 69, 58, 0.16);
+      --purple: #bf5af2;
+      --purple-soft: rgba(191, 90, 242, 0.16);
+      --cyan: #64d2ff;
+      --cyan-soft: rgba(100, 210, 255, 0.16);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: calc(16px * var(--font-scale));
+      background-color: var(--bg-pure);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.45;
+    }
+
+    body {
+      background-color: var(--bg-pure);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
+    /* Contenedor estilo iPhone 11 */
+    .app-shell {
+      width: 100%;
+      max-width: 440px;
+      min-height: 100vh;
+      background-color: var(--bg-pure);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      padding-top: calc(3.6rem + var(--safe-top));
+      padding-bottom: calc(4.8rem + var(--safe-bottom));
+      border-left: 1px solid #14141c;
+      border-right: 1px solid #14141c;
+    }
+
+    /* Barra superior fija */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      max-width: 440px;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.86);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: calc(0.55rem + var(--safe-top)) 0.9rem 0.55rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand-dot {
+      width: 0.65rem;
+      height: 0.65rem;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    .brand-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      display: block;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .font-btn {
+      background: var(--bg-elevated);
+      color: var(--text-main);
+      border: 1px solid var(--border-light);
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: transform 0.12s ease, background 0.2s;
+    }
+
+    .font-btn:active {
+      transform: scale(0.95);
+      background: var(--accent-soft);
+    }
+
+    .font-badge {
+      font-size: 0.68rem;
+      color: var(--cyan);
+      background: rgba(100, 210, 255, 0.14);
+      padding: 0.08rem 0.35rem;
+      border-radius: 6px;
+    }
+
+    /* Secciones */
+    .view-section {
+      display: none;
+      padding: 0.85rem;
+      flex-direction: column;
+      gap: 0.9rem;
+      animation: fadeIn 0.22s ease;
+    }
+
+    .view-section.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Tarjetas */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 0.9rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.18rem 0.5rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-blue { background: var(--accent-soft); color: var(--cyan); border: 1px solid rgba(100,210,255,0.3); }
+    .badge-green { background: var(--green-soft); color: var(--green); border: 1px solid rgba(48,209,88,0.3); }
+    .badge-amber { background: var(--amber-soft); color: var(--amber); border: 1px solid rgba(255,214,10,0.3); }
+    .badge-red { background: var(--red-soft); color: var(--red); border: 1px solid rgba(255,69,58,0.3); }
+    .badge-purple { background: var(--purple-soft); color: var(--purple); border: 1px solid rgba(191,90,242,0.3); }
+
+    .muted {
+      color: var(--text-muted);
+      font-size: 0.84rem;
+    }
+
+    /* Segmented Control estilo iOS */
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      background: var(--bg-elevated);
+      padding: 0.22rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      gap: 0.2rem;
+    }
+
+    .segmented.three {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .seg-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      padding: 0.48rem 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .seg-btn.active {
+      background: #262636;
+      color: var(--text-main);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+    /* Diagrama SVG de Estados */
+    .state-canvas {
+      width: 100%;
+      background: #060609;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.5rem;
+      overflow: hidden;
+    }
+
+    .state-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .state-node {
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .state-node rect, .state-node ellipse {
+      transition: all 0.25s ease;
+    }
+
+    .state-node.active-state rect,
+    .state-node.active-state ellipse {
+      stroke-width: 3px;
+      filter: drop-shadow(0 0 8px currentColor);
+    }
+
+    /* Botones de Eventos de Transición */
+    .event-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.45rem;
+    }
+
+    .btn {
+      background: var(--bg-elevated);
+      color: var(--text-main);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 0.58rem 0.65rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      transition: transform 0.1s ease, border-color 0.2s, background 0.2s;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      text-align: center;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    .btn-success {
+      background: var(--green);
+      color: #000;
+      border-color: var(--green);
+      text-align: center;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    .btn-amber {
+      background: var(--amber-soft);
+      color: var(--amber);
+      border-color: rgba(255, 214, 10, 0.45);
+      text-align: center;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    .btn-sub {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* Visualizador de Colas FIFO (Figura 6) */
+    .queues-box {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      background: #07070b;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.65rem;
+    }
+
+    .queue-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 0.78rem;
+    }
+
+    .queue-label {
+      min-width: 6.2rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .queue-slots {
+      display: flex;
+      gap: 0.3rem;
+      flex-wrap: wrap;
+      flex: 1;
+      justify-content: flex-end;
+    }
+
+    .proc-pill {
+      padding: 0.2rem 0.55rem;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .pill-A { background: rgba(10,132,255,0.22); color: #64d2ff; border: 1px solid #0a84ff; }
+    .pill-B { background: rgba(255,214,10,0.2); color: #ffd60a; border: 1px solid #ffd60a; }
+    .pill-C { background: rgba(48,209,88,0.2); color: #30d158; border: 1px solid #30d158; }
+    .pill-OS { background: rgba(191,90,242,0.22); color: #d98ff8; border: 1px solid #bf5af2; }
+
+    /* PCB & Memoria (Figura 2) */
+    .mem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.55rem;
+    }
+
+    .mem-block {
+      background: #08080d;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.55rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .mem-layer {
+      padding: 0.32rem 0.45rem;
+      border-radius: 7px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Tabla comparativa Proceso vs Hilo */
+    .comp-item {
+      background: #08080c;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.65rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .comp-head {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--cyan);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .comp-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+      font-size: 0.78rem;
+    }
+
+    .comp-col {
+      background: var(--bg-elevated);
+      padding: 0.45rem;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+    }
+
+    .comp-col.thread {
+      border-left-color: var(--green);
+    }
+
+    /* Diagrama de Hilos (Figura 12) */
+    .thread-diagram {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.35rem;
+      background: #07070b;
+      padding: 0.65rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      text-align: center;
+      font-size: 0.74rem;
+    }
+
+    .shared-banner {
+      grid-column: span 3;
+      background: rgba(10, 132, 255, 0.16);
+      border: 1px dashed var(--accent);
+      color: var(--cyan);
+      padding: 0.4rem;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+
+    .thread-col {
+      background: var(--bg-elevated);
+      border: 1px solid rgba(48, 209, 88, 0.35);
+      border-radius: 9px;
+      padding: 0.45rem 0.3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .code-box {
+      background: #06060a;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.6rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.75rem;
+      overflow-x: auto;
+      color: #d4d4e8;
+      white-space: pre-wrap;
+    }
+
+    /* Sección 3: Ejercicios */
+    .hud-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #08080d;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.55rem 0.75rem;
+      gap: 0.4rem;
+    }
+
+    .hearts {
+      font-size: 1.05rem;
+      letter-spacing: 0.1rem;
+    }
+
+    .stepper {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.3rem;
+    }
+
+    .step-pill {
+      text-align: center;
+      padding: 0.32rem 0.1rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border-radius: 8px;
+      background: var(--bg-elevated);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .step-pill.current {
+      background: var(--accent-soft);
+      color: var(--cyan);
+      border-color: var(--accent);
+    }
+
+    .step-pill.done {
+      background: var(--green-soft);
+      color: var(--green);
+      border-color: var(--green);
+    }
+
+    .traces-table {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.4rem;
+    }
+
+    .trace-col {
+      background: #07070c;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.45rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.75rem;
+    }
+
+    .trace-col-header {
+      font-weight: 700;
+      font-size: 0.74rem;
+      padding-bottom: 0.3rem;
+      margin-bottom: 0.3rem;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .ins-item {
+      padding: 0.12rem 0.3rem;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .ins-item.executed {
+      opacity: 0.38;
+      text-decoration: line-through;
+    }
+
+    .ins-item.io-ins {
+      color: var(--amber);
+      font-weight: 700;
+    }
+
+    /* Opciones e inputs del ejercicio */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .form-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .choice-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .choice-btn {
+      background: var(--bg-elevated);
+      color: var(--text-main);
+      border: 1px solid var(--border-light);
+      border-radius: 11px;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.82rem;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .choice-btn.selected {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--cyan);
+      font-weight: 700;
+    }
+
+    .chip-pool {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .ins-chip {
+      background: var(--bg-elevated);
+      color: var(--text-main);
+      border: 1px solid var(--border-light);
+      border-radius: 9px;
+      padding: 0.38rem 0.6rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .ins-chip.selected {
+      background: var(--green-soft);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .combined-preview {
+      background: #050508;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.55rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.76rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.28rem;
+      min-height: 2.6rem;
+      align-items: center;
+    }
+
+    .feedback-banner {
+      padding: 0.6rem 0.75rem;
+      border-radius: 11px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: none;
+    }
+
+    .feedback-banner.ok {
+      display: block;
+      background: var(--green-soft);
+      color: var(--green);
+      border: 1px solid rgba(48,209,88,0.4);
+    }
+
+    .feedback-banner.err {
+      display: block;
+      background: var(--red-soft);
+      color: var(--red);
+      border: 1px solid rgba(255,69,58,0.4);
+    }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+
+    /* Barra de navegación inferior estilo iPhone */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      max-width: 440px;
+      z-index: 100;
+      background: rgba(8, 8, 12, 0.92);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-top: 1px solid var(--border);
+      padding: 0.4rem 0.5rem calc(0.45rem + var(--safe-bottom));
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.25rem;
+    }
+
+    .nav-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.18rem;
+      padding: 0.35rem 0.2rem;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .nav-tab svg {
+      width: 1.35rem;
+      height: 1.35rem;
+      stroke: currentColor;
+    }
+
+    .nav-tab.active {
+      color: var(--accent);
+      background: rgba(10, 132, 255, 0.1);
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.4rem;
+    }
+
+    .mini-select {
+      width: 100%;
+      background: var(--bg-input);
+      color: var(--text-main);
+      border: 1px solid var(--border-light);
+      border-radius: 9px;
+      padding: 0.45rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- CABECERA FIJA -->
+    <header class="top-bar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <div>
+          <span class="brand-title">SO · Tema 3</span>
+          <span class="brand-sub">Procesos, Hilos y Trazas</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="font-btn" id="fontToggleBtn" onclick="cycleFontSize()" title="Cambiar tamaño de letra">
+          <span>Aa</span>
+          <span class="font-badge" id="fontBadge">100%</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- =========================================================
+         PARTE 1: ESTADOS DEL PROCESO (VISUAL E INTERACTIVO)
+         ========================================================= -->
+    <section id="sec-estados" class="view-section active">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">🔄 Diagrama Visual de Estados</h2>
+          <span class="badge badge-blue" id="modelBadge">5 Estados</span>
+        </div>
+        <p class="muted">Toca cualquier estado en el diagrama o dispara un evento del Sistema Operativo para ver cómo transita el proceso y su PCB.</p>
+
+        <div class="segmented">
+          <button class="seg-btn active" id="btnModel5" onclick="setProcessModel(5)">Modelo 5 Estados</button>
+          <button class="seg-btn" id="btnModel2" onclick="setProcessModel(2)">Modelo 2 Estados</button>
+        </div>
+
+        <!-- SVG DIAGRAMA 5 ESTADOS -->
+        <div class="state-canvas" id="canvas5">
+          <svg class="state-svg" viewBox="0 0 380 235">
+            <defs>
+              <marker id="arr" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#64d2ff"/>
+              </marker>
+            </defs>
+            <!-- Flechas de transición -->
+            <line x1="74" y1="62" x2="112" y2="62" stroke="#64d2ff" stroke-width="1.8" marker-end="url(#arr)"/>
+            <text x="93" y="54" fill="#9898ad" font-size="8.5" text-anchor="middle">Admisión</text>
+
+            <path d="M 176 50 Q 210 30 242 50" fill="none" stroke="#30d158" stroke-width="2" marker-end="url(#arr)"/>
+            <text x="209" y="34" fill="#30d158" font-size="8.5" text-anchor="middle">Activación (Dispatch)</text>
+
+            <path d="M 242 74 Q 210 92 176 74" fill="none" stroke="#ffd60a" stroke-width="1.8" marker-end="url(#arr)"/>
+            <text x="209" y="96" fill="#ffd60a" font-size="8.5" text-anchor="middle">Interrupción / Cuota</text>
+
+            <line x1="306" y1="62" x2="338" y2="62" stroke="#ff453a" stroke-width="1.8" marker-end="url(#arr)"/>
+            <text x="321" y="53" fill="#ff453a" font-size="8.5" text-anchor="middle">Salida</text>
+
+            <path d="M 268 86 L 222 165" fill="none" stroke="#bf5af2" stroke-width="1.8" marker-end="url(#arr)"/>
+            <text x="275" y="132" fill="#bf5af2" font-size="8.5" text-anchor="middle">Espera E/S / Syscall</text>
+
+            <path d="M 175 165 L 145 86" fill="none" stroke="#64d2ff" stroke-width="1.8" marker-end="url(#arr)"/>
+            <text x="115" y="132" fill="#64d2ff" font-size="8.5" text-anchor="middle">Fin E/S / Evento</text>
+
+            <!-- Nodos -->
+            <g class="state-node" id="node-nuevo" onclick="selectStateInfo('nuevo')" style="color:#9898ad">
+              <ellipse cx="42" cy="62" rx="31" ry="20" fill="#181822" stroke="#787891" stroke-width="1.8"/>
+              <text x="42" y="65" fill="#fff" font-size="9.5" font-weight="bold" text-anchor="middle">Nuevo</text>
+            </g>
+
+            <g class="state-node" id="node-listo" onclick="selectStateInfo('listo')" style="color:#0a84ff">
+              <ellipse cx="144" cy="62" rx="32" ry="22" fill="#0d2038" stroke="#0a84ff" stroke-width="1.8"/>
+              <text x="144" y="65" fill="#64d2ff" font-size="10" font-weight="bold" text-anchor="middle">Listo</text>
+            </g>
+
+            <g class="state-node active-state" id="node-ejecutando" onclick="selectStateInfo('ejecutando')" style="color:#30d158">
+              <ellipse cx="274" cy="62" rx="34" ry="22" fill="#0d2e18" stroke="#30d158" stroke-width="1.8"/>
+              <text x="274" y="65" fill="#30d158" font-size="9.5" font-weight="bold" text-anchor="middle">Ejecutando</text>
+            </g>
+
+            <g class="state-node" id="node-bloqueado" onclick="selectStateInfo('bloqueado')" style="color:#bf5af2">
+              <ellipse cx="198" cy="186" rx="44" ry="23" fill="#251233" stroke="#bf5af2" stroke-width="1.8"/>
+              <text x="198" y="184" fill="#e2a4ff" font-size="9" font-weight="bold" text-anchor="middle">Esperando /</text>
+              <text x="198" y="195" fill="#e2a4ff" font-size="9" font-weight="bold" text-anchor="middle">Bloqueado</text>
+            </g>
+
+            <g class="state-node" id="node-saliente" onclick="selectStateInfo('saliente')" style="color:#ff453a">
+              <ellipse cx="358" cy="62" rx="20" ry="20" fill="#301111" stroke="#ff453a" stroke-width="1.8"/>
+              <text x="358" y="65" fill="#ff6961" font-size="8" font-weight="bold" text-anchor="middle">Saliente</text>
+            </g>
+          </svg>
+        </div>
+
+        <!-- SVG DIAGRAMA 2 ESTADOS -->
+        <div class="state-canvas" id="canvas2" style="display:none">
+          <svg class="state-svg" viewBox="0 0 380 140">
+            <line x1="15" y1="68" x2="65" y2="68" stroke="#64d2ff" stroke-width="2" marker-end="url(#arr)"/>
+            <text x="40" y="58" fill="#9898ad" font-size="8.5" text-anchor="middle">Creación</text>
+
+            <path d="M 155 52 Q 200 25 242 52" fill="none" stroke="#30d158" stroke-width="2" marker-end="url(#arr)"/>
+            <text x="198" y="32" fill="#30d158" font-size="9" text-anchor="middle">Activación (Dispatch)</text>
+
+            <path d="M 242 84 Q 200 112 155 84" fill="none" stroke="#ffd60a" stroke-width="2" marker-end="url(#arr)"/>
+            <text x="198" y="114" fill="#ffd60a" font-size="9" text-anchor="middle">Pausa o Interrupción</text>
+
+            <line x1="322" y1="68" x2="368" y2="68" stroke="#ff453a" stroke-width="2" marker-end="url(#arr)"/>
+            <text x="345" y="58" fill="#ff453a" font-size="8.5" text-anchor="middle">Salida</text>
+
+            <ellipse cx="110" cy="68" rx="44" ry="24" fill="#181826" stroke="#0a84ff" stroke-width="2"/>
+            <text x="110" y="71" fill="#64d2ff" font-size="9.5" font-weight="bold" text-anchor="middle">No Ejecutando</text>
+
+            <ellipse cx="282" cy="68" rx="40" ry="24" fill="#0d2e18" stroke="#30d158" stroke-width="2"/>
+            <text x="282" y="71" fill="#30d158" font-size="9.5" font-weight="bold" text-anchor="middle">Ejecutando</text>
+          </svg>
+        </div>
+
+        <!-- Panel detalle del Estado activo -->
+        <div class="queues-box" id="stateInfoBox">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong id="stTitle" style="color:var(--green);font-size:0.92rem;">🟢 Estado: EN EJECUCIÓN</strong>
+            <span class="badge badge-purple" id="cpuModeBadge">Modo Usuario</span>
+          </div>
+          <p id="stDesc" class="muted">Las instrucciones del proceso se ejecutan en la CPU apuntadas por el Contador de Programa (PC). En sistemas monoprocesador solo hay 1 proceso aquí.</p>
+        </div>
+
+        <!-- Botones de simulación de eventos -->
+        <div class="card-title" style="font-size:0.86rem;margin-top:0.2rem;">⚡ Disparar Evento de Transición:</div>
+        <div class="event-grid">
+          <button class="btn" onclick="triggerOSEvent('new')">
+            <span>➕ Null → Nuevo</span>
+            <span class="btn-sub">Crear PCB (aún sin RAM)</span>
+          </button>
+          <button class="btn" onclick="triggerOSEvent('admit')">
+            <span>📥 Nuevo → Listo</span>
+            <span class="btn-sub">Admisión en Memoria</span>
+          </button>
+          <button class="btn" onclick="triggerOSEvent('dispatch')">
+            <span>🚀 Listo → Ejecutando</span>
+            <span class="btn-sub">Activador (100,101,102)</span>
+          </button>
+          <button class="btn" onclick="triggerOSEvent('timeout')">
+            <span>⏱️ Ejecutando → Listo</span>
+            <span class="btn-sub">Fin de cuota / Reloj</span>
+          </button>
+          <button class="btn" onclick="triggerOSEvent('io_req')">
+            <span>💿 Ejecutando → Bloq.</span>
+            <span class="btn-sub">Petición E/S o Fallo Mem</span>
+          </button>
+          <button class="btn" onclick="triggerOSEvent('io_done')">
+            <span>🔔 Bloqueado → Listo</span>
+            <span class="btn-sub">Interrupción Fin de E/S</span>
+          </button>
+          <button class="btn" onclick="triggerOSEvent('exit')" style="grid-column: span 2;">
+            <span>🛑 Ejecutando → Saliente (Terminación)</span>
+            <span class="btn-sub">Salida voluntaria, error fatal (trap) o kill del padre</span>
+          </button>
+        </div>
+
+        <!-- Colas en vivo (Figura 6) -->
+        <div class="queues-box">
+          <div class="queue-row">
+            <span class="queue-label">🖥️ CPU Activa:</span>
+            <div class="queue-slots" id="qCpu"><span class="proc-pill pill-A">PROC A (PC:502)</span></div>
+          </div>
+          <div class="queue-row">
+            <span class="queue-label">📋 Cola Listos:</span>
+            <div class="queue-slots" id="qReady">
+              <span class="proc-pill pill-B">PROC B</span>
+              <span class="proc-pill pill-C">PROC C</span>
+            </div>
+          </div>
+          <div class="queue-row">
+            <span class="queue-label">⏳ Cola Bloq.:</span>
+            <div class="queue-slots" id="qBlocked"><span class="muted">Vacía</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PCB E IMAGEN EN MEMORIA (FIGURA 2) -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">🧠 Imagen en Memoria y PCB</h3>
+          <span class="badge badge-amber">Figura 2</span>
+        </div>
+        <p class="muted">El <strong>PCB (Bloque de Control de Proceso)</strong> es la estructura que permite interrumpir un proceso y restaurar su contexto exacto más tarde.</p>
+        <div class="mem-grid">
+          <div class="mem-block">
+            <strong style="font-size:0.78rem;color:var(--cyan);">Imagen en RAM</strong>
+            <div class="mem-layer" style="background:rgba(10,132,255,0.15);"><span>Pila (Stack)</span><span>↓</span></div>
+            <div class="mem-layer" style="background:rgba(255,255,255,0.03);color:var(--text-muted);"><span>↕ Libre</span><span></span></div>
+            <div class="mem-layer" style="background:rgba(191,90,242,0.15);"><span>Cúmulo (Heap)</span><span>↑</span></div>
+            <div class="mem-layer" style="background:rgba(255,214,10,0.15);"><span>Datos Globales</span><span>Vars</span></div>
+            <div class="mem-layer" style="background:rgba(48,209,88,0.15);"><span>Texto (Código)</span><span>PC</span></div>
+          </div>
+          <div class="mem-block">
+            <strong style="font-size:0.78rem;color:var(--amber);">Contenido del PCB</strong>
+            <div class="mem-layer" style="background:#15151f;"><span>1. PID Único</span></div>
+            <div class="mem-layer" style="background:#15151f;"><span>2. Estado (Listo...)</span></div>
+            <div class="mem-layer" style="background:#15151f;"><span>3. Prioridad</span></div>
+            <div class="mem-layer" style="background:#15151f;"><span>4. Contador Prog (PC)</span></div>
+            <div class="mem-layer" style="background:#15151f;"><span>5. Punteros Base/Lím</span></div>
+            <div class="mem-layer" style="background:#15151f;"><span>6. Registros / E/S</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         PARTE 2: COMPARATIVA PORMENORIZADA PROCESO VS HILO
+         ========================================================= -->
+    <section id="sec-comparativa" class="view-section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">⚖️ Proceso vs. Hilo (Thread)</h2>
+          <span class="badge badge-green">Sección 3.5</span>
+        </div>
+        <p class="muted">En los Sistemas Operativos modernos se separan dos conceptos clave que antes iban unidos:</p>
+        <div class="comp-cols">
+          <div class="comp-col">
+            <strong style="color:var(--cyan);">📦 PROCESO (Tarea)</strong>
+            <p class="muted" style="margin-top:0.2rem;">Unidad de <strong>propiedad de recursos</strong> (espacio de direcciones virtual, memoria, archivos y dispositivos E/S protegidos).</p>
+          </div>
+          <div class="comp-col thread">
+            <strong style="color:var(--green);">⚡ HILO (Proceso Ligero)</strong>
+            <p class="muted" style="margin-top:0.2rem;">Unidad de <strong>planificación y ejecución</strong> en CPU (tiene Estado, Prioridad, PC, Registros y Pila propia).</p>
+          </div>
+        </div>
+
+        <!-- Diagrama Visual Figura 12 -->
+        <div class="card-title" style="font-size:0.86rem;margin-top:0.2rem;">🔬 Arquitectura Interna de un Proceso Multihilo (Fig. 12):</div>
+        <div class="thread-diagram">
+          <div class="shared-banner">
+            🌐 COMPARTIDO POR TODOS LOS HILOS DEL PROCESO<br/>
+            <span style="font-size:0.7rem;font-weight:500;">Código (Texto) · Datos Globales · Heap · Archivos Abiertos (E/S)</span>
+          </div>
+          <div class="thread-col">
+            <strong style="color:var(--green);">Hilo 1</strong>
+            <span class="badge badge-green">PC Propio</span>
+            <span class="badge badge-purple">Registros</span>
+            <span class="badge badge-amber">Pila (Stack)</span>
+            <span style="font-size:0.7rem;color:var(--text-muted);">〰️ Traza 1</span>
+          </div>
+          <div class="thread-col">
+            <strong style="color:var(--green);">Hilo 2</strong>
+            <span class="badge badge-green">PC Propio</span>
+            <span class="badge badge-purple">Registros</span>
+            <span class="badge badge-amber">Pila (Stack)</span>
+            <span style="font-size:0.7rem;color:var(--text-muted);">〰️ Traza 2</span>
+          </div>
+          <div class="thread-col">
+            <strong style="color:var(--green);">Hilo 3</strong>
+            <span class="badge badge-green">PC Propio</span>
+            <span class="badge badge-purple">Registros</span>
+            <span class="badge badge-amber">Pila (Stack)</span>
+            <span style="font-size:0.7rem;color:var(--text-muted);">〰️ Traza 3</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comparativa pormenorizada punto por punto -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">📋 Comparativa Pormenorizada</h3>
+          <span class="badge badge-blue">7 Dimensiones</span>
+        </div>
+
+        <div class="comp-item">
+          <div class="comp-head"><span>1. Espacio de Direcciones y Memoria</span><span>RAM</span></div>
+          <div class="comp-cols">
+            <div class="comp-col"><strong>Proceso:</strong> Aislado y exclusivo. Cada proceso con <code>fork()</code> duplica su espacio de memoria.</div>
+            <div class="comp-col thread"><strong>Hilo:</strong> Comparten el mismo espacio de direcciones del proceso padre.</div>
+          </div>
+        </div>
+
+        <div class="comp-item">
+          <div class="comp-head"><span>2. Variables Globales (Ejercicios 9 y 10)</span><span>Datos</span></div>
+          <div class="comp-cols">
+            <div class="comp-col"><strong>Proceso:</strong> Cada proceso modifica su <strong>propia copia independiente</strong> de la variable global.</div>
+            <div class="comp-col thread"><strong>Hilo:</strong> Todos los hilos leen y modifican la <strong>misma variable global</strong> en RAM.</div>
+          </div>
+        </div>
+
+        <div class="comp-item">
+          <div class="comp-head"><span>3. Coste de Creación y Finalización</span><span>Economía</span></div>
+          <div class="comp-cols">
+            <div class="comp-col"><strong>Proceso:</strong> Lento y costoso (reservar RAM, inicializar PCB, copiar tablas de páginas).</div>
+            <div class="comp-col thread"><strong>Hilo:</strong> Mucho más rápido y económico (solo requiere crear su Pila y registros).</div>
+          </div>
+        </div>
+
+        <div class="comp-item">
+          <div class="comp-head"><span>4. Cambio de Contexto (Context Switch)</span><span>CPU</span></div>
+          <div class="comp-cols">
+            <div class="comp-col"><strong>Proceso:</strong> Pesado. Hay que invalidar caché TLB y cambiar punteros de memoria.</div>
+            <div class="comp-col thread"><strong>Hilo:</strong> Ultraligero. Se mantiene el mismo espacio de memoria; solo cambian registros y PC.</div>
+          </div>
+        </div>
+
+        <div class="comp-item">
+          <div class="comp-head"><span>5. Comunicación entre entidades (IPC)</span><span>Datos</span></div>
+          <div class="comp-cols">
+            <div class="comp-col"><strong>Proceso:</strong> Requiere intervención del Kernel (pipes, paso de mensajes, shm).</div>
+            <div class="comp-col thread"><strong>Hilo:</strong> Directa y natural al compartir las mismas variables globales y heap.</div>
+          </div>
+        </div>
+
+        <div class="comp-item">
+          <div class="comp-head"><span>6. Protección y Aislamiento</span><span>Seguridad</span></div>
+          <div class="comp-cols">
+            <div class="comp-col"><strong>Proceso:</strong> Alta protección (registros Base y Límite). Si uno falla no corrompe a otro.</div>
+            <div class="comp-col thread"><strong>Hilo:</strong> Sin aislamiento entre hilos del mismo proceso: un puntero erróneo afecta a todos.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Simulador Interactivo Ejercicios 9 y 10 en C -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">🧪 Laboratorio en C: Ejercicios 9 vs 10</h3>
+          <span class="badge badge-purple">Interactivo</span>
+        </div>
+        <p class="muted">Comprueba por qué en el Ejercicio 9 (2 procesos con <code>fork()</code>) la variable global <code>n = 2</code> acaba en <strong>7 y -3</strong>, mientras que en el Ejercicio 10 (2 hilos con <code>pthread</code>) acaba en <strong>2</strong>:</p>
+        <div class="segmented">
+          <button class="seg-btn active" id="btnSimFork" onclick="switchCSim('fork')">Ej. 9: fork() Procesos</button>
+          <button class="seg-btn" id="btnSimThread" onclick="switchCSim('thread')">Ej. 10: pthread Hilos</button>
+        </div>
+        <div class="code-box" id="cSimOutput"></div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         PARTE 3: 20 EJERCICIOS DE TRAZAS (5 ETAPAS CADA UNO)
+         ========================================================= -->
+    <section id="sec-ejercicios" class="view-section">
+      <!-- HUD: Vidas, Progreso Aleatorio, Botón Dar Respuesta -->
+      <div class="hud-bar">
+        <div>
+          <span class="hearts" id="livesDisplay">❤️❤️❤️</span>
+          <div style="font-size:0.68rem;color:var(--text-muted);">Vidas restantes</div>
+        </div>
+        <div style="text-align:center;">
+          <span class="badge badge-blue" id="exCounterBadge">Ejercicio 1 / 20</span>
+          <div style="font-size:0.68rem;color:var(--text-muted);margin-top:0.15rem;" id="exTitleLabel">Sorteo sin repetición</div>
+        </div>
+        <button class="btn btn-amber" style="padding:0.4rem 0.6rem;font-size:0.75rem;" onclick="giveStepAnswer()">
+          💡 Respuesta
+        </button>
+      </div>
+
+      <!-- Barra de las 5 Etapas -->
+      <div class="stepper" id="stageStepper">
+        <div class="step-pill current" onclick="jumpToStage(1)">1. Inicio</div>
+        <div class="step-pill" onclick="jumpToStage(2)">2. Activo</div>
+        <div class="step-pill" onclick="jumpToStage(3)">3. Desalojo</div>
+        <div class="step-pill" onclick="jumpToStage(4)">4. Activador</div>
+        <div class="step-pill" onclick="jumpToStage(5)">5. Colas/Fin</div>
+      </div>
+
+      <!-- Enunciado y Tabla de Trazas de A, B, C -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" id="exHeaderTitle">📑 Trazas de Procesos</h3>
+          <button class="font-btn" onclick="nextRandomExercise()" style="font-size:0.72rem;">🎲 Otro Ej.</button>
+        </div>
+        <p class="muted" id="exStatementText"></p>
+
+        <div class="traces-table" id="exTracesGrid"></div>
+      </div>
+
+      <!-- PANTALLA DINÁMICA DE LA ETAPA ACTUAL (1 a 5) -->
+      <div class="card" id="stageContainer">
+        <div class="card-header">
+          <h3 class="card-title" id="stageTitle">Etapa 1</h3>
+          <span class="badge badge-purple" id="stageBadge">Paso 1 de 5</span>
+        </div>
+        <p class="muted" id="stageInstruction"></p>
+
+        <!-- Contenido interactivo de la pantalla actual -->
+        <div id="stageInteractiveBody" style="display:flex;flex-direction:column;gap:0.65rem;"></div>
+
+        <!-- Banner de feedback -->
+        <div class="feedback-banner" id="stageFeedback"></div>
+
+        <!-- Botones de acción -->
+        <div class="action-row">
+          <button class="btn btn-amber" onclick="giveStepAnswer()">💡 Dar Respuesta</button>
+          <button class="btn btn-primary" id="verifyBtn" onclick="verifyCurrentStage()">✅ Comprobar Etapa</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- BARRA INFERIOR DE NAVEGACIÓN (3 PARTES) -->
+    <nav class="bottom-nav">
+      <button class="nav-tab active" id="tab-estados" onclick="switchTab('estados')">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2">
+          <circle cx="12" cy="12" r="9"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 3"/>
+        </svg>
+        <span>1. Estados</span>
+      </button>
+      <button class="nav-tab" id="tab-comparativa" onclick="switchTab('comparativa')">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+        </svg>
+        <span>2. Proceso vs Hilo</span>
+      </button>
+      <button class="nav-tab" id="tab-ejercicios" onclick="switchTab('ejercicios')">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        <span>3. 20 Ejercicios</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    /* ================================================================
+       CONTROL DE TAMAÑO DE FUENTE (BOTÓN Aa)
+       ================================================================ */
+    const FONT_SCALES = [1, 1.12, 1.25, 1.38];
+    let currentFontIdx = 0;
+
+    function cycleFontSize() {
+      currentFontIdx = (currentFontIdx + 1) % FONT_SCALES.length;
+      const scale = FONT_SCALES[currentFontIdx];
+      document.documentElement.style.setProperty('--font-scale', scale);
+      document.getElement.fontSize = (16 * scale) + 'px';
+      document.getElementById('fontBadge').textContent = Math.round(scale * 100) + '%';
+    }
+
+    /* ================================================================
+       NAVEGACIÓN ENTRE LAS 3 SECCIONES
+       ================================================================ */
+    function switchTab(tabId) {
+      ['estados', 'comparativa', 'ejercicios'].forEach(id => {
+        document.getElementById('sec-' + id).classList.toggle('active', id === tabId);
+        document.getElementById('tab-' + id).classList.toggle('active', id === tabId);
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /* ================================================================
+       PARTE 1: SIMULADOR VISUAL DE ESTADOS DEL PROCESO
+       ================================================================ */
+    const STATE_DATA = {
+      nuevo: {
+        title: '⚪ Estado: NUEVO',
+        mode: 'Modo Kernel',
+        desc: 'El proceso está siendo creado (Tabla 2: nuevo lote, sesión interactiva, servicio del SO o fork() de un proceso padre). Ya tiene PCB pero aún NO está en memoria principal.'
+      },
+      listo: {
+        title: '🔵 Estado: LISTO (Ready)',
+        mode: 'En Cola RAM',
+        desc: 'El proceso ya está cargado en memoria principal y espera en la Cola de Listos a que el planificador/activador (dispatcher) le asigne la CPU.'
+      },
+      ejecutando: {
+        title: '🟢 Estado: EN EJECUCIÓN (Running)',
+        mode: 'Modo Usuario',
+        desc: 'El Contador de Programa (PC) del procesador apunta a las instrucciones de este proceso. En un monoprocesador solo hay un proceso ejecutando.'
+      },
+      bloqueado: {
+        title: '🟣 Estado: ESPERANDO / BLOQUEADO',
+        mode: 'En Cola E/S',
+        desc: 'El proceso no puede continuar hasta que ocurra un evento externo (fin de operación E/S, fallo de memoria resuelto o señal). Aunque la CPU quede libre, debe pasar antes por Listo.'
+      },
+      saliente: {
+        title: '🔴 Estado: TERMINADO / SALIENTE',
+        mode: 'Liberando PCB',
+        desc: 'El proceso ha finalizado (salida voluntaria, error fatal/trap, memoria agotada o kill del padre) y libera sus estructuras en memoria.'
+      }
+    };
+
+    function setProcessModel(num) {
+      document.getElementById('canvas5').style.display = num === 5 ? 'block' : 'none';
+      document.getElementById('canvas2').style.display = num === 2 ? 'block' : 'none';
+      document.getElementById('btnModel5').classList.toggle('active', num === 5);
+      document.getElementById('btnModel2').classList.toggle('active', num === 2);
+      document.getElementById('modelBadge').textContent = num + ' Estados';
+    }
+
+    function selectStateInfo(stateKey) {
+      document.querySelectorAll('.state-node').forEach(el => el.classList.remove('active-state'));
+      const node = document.getElementById('node-' + stateKey);
+      if (node) node.classList.add('active-state');
+      const info = STATE_DATA[stateKey];
+      document.getElementById('stTitle').textContent = info.title;
+      document.getElementById('cpuModeBadge').textContent = info.mode;
+      document.getElementById('stDesc').textContent = info.desc;
+    }
+
+    function triggerOSEvent(ev) {
+      const qCpu = document.getElementById('qCpu');
+      const qReady = document.getElementById('qReady');
+      const qBlocked = document.getElementById('qBlocked');
+
+      if (ev === 'new') {
+        selectStateInfo('nuevo');
+        qCpu.innerHTML = '<span class="proc-pill pill-OS">KERNEL: Creando PCB</span>';
+      } else if (ev === 'admit') {
+        selectStateInfo('listo');
+        qCpu.innerHTML = '<span class="proc-pill pill-A">PROC A (PC:502)</span>';
+        qReady.innerHTML = '<span class="proc-pill pill-B">PROC B</span><span class="proc-pill pill-C">PROC C</span><span class="proc-pill pill-A">PROC D (Nuevo)</span>';
+      } else if (ev === 'dispatch') {
+        selectStateInfo('ejecutando');
+        qCpu.innerHTML = '<span class="proc-pill pill-OS">DISPATCHER (100..102)</span> → <span class="proc-pill pill-B">PROC B</span>';
+        qReady.innerHTML = '<span class="proc-pill pill-C">PROC C</span><span class="proc-pill pill-A">PROC A</span>';
+      } else if (ev === 'timeout') {
+        selectStateInfo('listo');
+        qCpu.innerHTML = '<span class="proc-pill pill-OS">INT. RELOJ (Modo Kernel)</span>';
+        qReady.innerHTML = '<span class="proc-pill pill-B">PROC B</span><span class="proc-pill pill-C">PROC C</span><span class="proc-pill pill-A">PROC A (Desalojado)</span>';
+      } else if (ev === 'io_req') {
+        selectStateInfo('bloqueado');
+        qCpu.innerHTML = '<span class="proc-pill pill-C">PROC C (En CPU)</span>';
+        qReady.innerHTML = '<span class="proc-pill pill-A">PROC A</span>';
+        qBlocked.innerHTML = '<span class="proc-pill pill-B">PROC B (Esperando E/S 1203)</span>';
+      } else if (ev === 'io_done') {
+        selectStateInfo('listo');
+        qBlocked.innerHTML = '<span class="muted">Vacía (Fin E/S)</span>';
+        qReady.innerHTML = '<span class="proc-pill pill-A">PROC A</span><span class="proc-pill pill-B">PROC B (Listo tras E/S)</span>';
+      } else if (ev === 'exit') {
+        selectStateInfo('saliente');
+        qCpu.innerHTML = '<span class="proc-pill pill-C">PROC C</span>';
+        qReady.innerHTML = '<span class="proc-pill pill-B">PROC B</span>';
+        qBlocked.innerHTML = '<span class="muted">PROC A Finalizado (Saliente)</span>';
+      }
+    }
+
+    /* ================================================================
+       PARTE 2: SIMULADOR EJERCICIOS 9 Y 10 (PROCESOS VS HILOS EN C)
+       ================================================================ */
+    function switchCSim(mode) {
+      document.getElementById('btnSimFork').classList.toggle('active', mode === 'fork');
+      document.getElementById('btnSimThread').classList.toggle('active', mode === 'thread');
+      const box = document.getElementById('cSimOutput');
+      if (mode === 'fork') {
+        box.innerHTML = `// EJERCICIO 9: Dos PROCESOS con fork()
+int n = 2; // Variable global (se DUPLICA en RAM al hacer fork)
+pid_t PID = fork();
+• Proceso Hijo  (PID == 0): ejecuta 5 veces n++  -> 2 + 5 = 7
+• Proceso Padre (PID > 0) : ejecuta 5 veces n--  -> 2 - 5 = -3
+
+SALIDA REAL EN CONSOLA:
+> El valor final de n para el proceso hijo es: 7
+> El valor final de n para el proceso padre es: -3
+💡 Conclusión: Cada proceso tiene su PROPIA copia aislada de 'n'.`;
+      } else {
+        box.innerHTML = `// EJERCICIO 10: Dos HILOS con pthread_create()
+int variable = 2; // Variable global COMPARTIDA por ambos hilos
+pthread_create(&thread1, NULL, routine, &decremento); // -1 (x5 veces)
+pthread_create(&thread2, NULL, routine, &incremento); // +1 (x5 veces)
+
+SALIDA REAL EN CONSOLA:
+> El valor final de n para este hilo es: 2
+> El valor final de n para este hilo es: 2
+💡 Conclusión: Ambos hilos operan sobre la MISMA dirección de memoria (2 - 5 + 5 = 2).`;
+      }
+    }
+    switchCSim('fork');
+
+    /* ================================================================
+       PARTE 3: 20 EJERCICIOS DE TRAZAS ENTRELAZADAS (5 ETAPAS)
+       ================================================================ */
+    const RAW_EXERCISES = [
+      // #1: Ejercicio exacto del Cuaderno de Ejercicios 3.6 (pág. 35-36)
+      {
+        id: 1,
+        title: "Cuaderno 3.6 · Ejercicio Oficial",
+        aStart: 500, aLen: 9, aIO: null,
+        bStart: 1200, bLen: 3, bIO: null,
+        cStart: 1600, cLen: 10, cIO: null,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #2: Basado en Tabla 1 del tema (Proceso B pide E/S en la 4ª instrucción)
+      {
+        id: 2,
+        title: "Tabla 1 · Petición de E/S en B",
+        aStart: 500, aLen: 8, aIO: null,
+        bStart: 1200, bLen: 4, bIO: 1203,
+        cStart: 1600, cLen: 8, cIO: null,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #3: Proceso A corto (termina antes de agotar cuota)
+      {
+        id: 3,
+        title: "Finalización Temprana de A",
+        aStart: 500, aLen: 3, aIO: null,
+        bStart: 1200, bLen: 7, bIO: null,
+        cStart: 1600, cLen: 6, cIO: null,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #4: Proceso A solicita E/S en 502
+      {
+        id: 4,
+        title: "Bloqueo por E/S en Proceso A",
+        aStart: 500, aLen: 3, aIO: 502,
+        bStart: 1200, bLen: 6, bIO: null,
+        cStart: 1600, cLen: 5, cIO: null,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #5: Cola inicial B -> C -> A
+      {
+        id: 5,
+        title: "Cola Inicial B → C → A",
+        aStart: 500, aLen: 6, aIO: null,
+        bStart: 1200, bLen: 7, bIO: null,
+        cStart: 1600, cLen: 4, cIO: null,
+        Order: ['B', 'C', 'A'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #6: Cola inicial C -> A -> B con E/S en C
+      {
+        id: 6,
+        title: "Cola C → A → B con E/S en C",
+        aStart: 500, aLen: 6, aIO: null,
+        bStart: 1200, bLen: 5, bIO: null,
+        cStart: 1600, cLen: 3, cIO: 1602,
+        Order: ['C', 'A', 'B'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #7: Direcciones base 600, 1300, 1700
+      {
+        id: 7,
+        title: "Nuevas Direcciones Base (600/1300/1700)",
+        aStart: 600, aLen: 7, aIO: null,
+        bStart: 1300, bLen: 4, bIO: null,
+        cStart: 1700, cLen: 6, cIO: null,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #8: Todos exactamente de 5 instrucciones
+      {
+        id: 8,
+        title: "Ráfagas Exactas al Cuanto (5 inst.)",
+        aStart: 500, aLen: 5, aIO: null,
+        bStart: 1200, bLen: 5, bIO: null,
+        cStart: 1600, cLen: 5, cIO: null,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #9: B inicia y pide E/S en su 2ª instrucción
+      {
+        id: 9,
+        title: "Llamada al Sistema Rápida en B",
+        aStart: 500, aLen: 6, aIO: null,
+        bStart: 1200, bLen: 2, bIO: 1201,
+        cStart: 1600, cLen: 7, cIO: null,
+        Order: ['B', 'A', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #10: Proceso C largo (10 inst), A y B cortos (2 inst)
+      {
+        id: 10,
+        title: "Procesos A y B Cortos vs C Largo",
+        aStart: 500, aLen: 2, aIO: null,
+        bStart: 1200, bLen: 2, bIO: null,
+        cStart: 1600, cLen: 9, cIO: null,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #11: A con fallo de memoria en 503
+      {
+        id: 11,
+        title: "Fallo de Memoria en A (Inst. 503)",
+        aStart: 500, aLen: 4, aIO: 503,
+        bStart: 1200, bLen: 5, bIO: null,
+        cStart: 1600, cLen: 7, cIO: null,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #12: Orden A -> C -> B
+      {
+        id: 12,
+        title: "Planificación FIFO en Orden A → C → B",
+        aStart: 500, aLen: 8, aIO: null,
+        bStart: 1200, bLen: 6, bIO: null,
+        cStart: 1600, cLen: 3, cIO: null,
+        Order: ['A', 'C', 'B'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #13: Orden C -> B -> A con agotamiento de cuota en C
+      {
+        id: 13,
+        title: "Cola C → B → A con Desalojo por Cuota",
+        aStart: 500, aLen: 4, aIO: null,
+        bStart: 1200, bLen: 3, bIO: null,
+        cStart: 1600, cLen: 8, cIO: null,
+        Order: ['C', 'B', 'A'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #14: Base 800, 1400, 2000 con E/S en A(801)
+      {
+        id: 14,
+        title: "Interrupción de E/S en 801 (Proceso A)",
+        aStart: 800, aLen: 2, aIO: 801,
+        bStart: 1400, bLen: 7, bIO: null,
+        cStart: 2000, cLen: 5, bIO2: null,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #15: B y C piden E/S
+      {
+        id: 15,
+        title: "Doble Bloqueo de E/S (B y C)",
+        aStart: 500, aLen: 9, aIO: null,
+        bStart: 1200, bLen: 3, bIO: 1202,
+        cStart: 1600, cLen: 3, cIO: 1602,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #16: A tiene 10 inst, B tiene 4, C tiene 4
+      {
+        id: 16,
+        title: "Doble Ciclo de A con B y C de 4 Inst.",
+        aStart: 500, aLen: 10, aIO: null,
+        bStart: 1200, bLen: 4, bIO: null,
+        cStart: 1600, cLen: 4, cIO: null,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #17: B empieza con 8 inst, A tiene 3, C tiene 6
+      {
+        id: 17,
+        title: "Prioridad de Llegada B → A → C",
+        aStart: 500, aLen: 3, aIO: null,
+        bStart: 1200, bLen: 8, bIO: null,
+        cStart: 1600, cLen: 6, cIO: null,
+        Order: ['B', 'A', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #18: Direcciones 400, 900, 1500
+      {
+        id: 18,
+        title: "Trazas 400 / 900 / 1500",
+        aStart: 400, aLen: 6, aIO: null,
+        bStart: 900, bLen: 6, bIO: null,
+        cStart: 1500, cLen: 3, cIO: null,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #19: C empieza y termina en 2 instrucciones
+      {
+        id: 19,
+        title: "Proceso C Ultraligero (2 instrucciones)",
+        aStart: 500, aLen: 7, aIO: null,
+        bStart: 1200, bLen: 5, bIO: null,
+        cStart: 1600, cLen: 2, cIO: null,
+        Order: ['C', 'A', 'B'],
+        quota: 5,
+        disp: [100, 101, 102]
+      },
+      // #20: Caso Maestro Completo (A=8, B=6, C=7)
+      {
+        id: 20,
+        title: "Caso Maestro Multirráfaga (A, B y C > 5)",
+        aStart: 500, aLen: 8, aIO: null,
+        bStart: 1200, bLen: 6, bIO: null,
+        cStart: 1600, cLen: 7, cIO: null,
+        Order: ['A', 'B', 'C'],
+        quota: 5,
+        disp: [100, 101, 102]
+      }
+    ];
+
+    // Motor que resuelve automáticamente cualquier ejercicio paso a paso (5 etapas)
+    function buildSolvedExercise(cfg) {
+      const makeSeq = (start, len) => Array.from({ length: len }, (_, i) => start + i);
+      const traces = {
+        A: makeSeq(cfg.aStart, cfg.aLen),
+        B: makeSeq(cfg.bStart, cfg.bLen),
+        C: makeSeq(cfg.cStart, cfg.cLen)
+      };
+      const ioMap = { A: cfg.aIO, B: cfg.bIO, C: cfg.cIO };
+      const idx = { A: 0, B: 0, C: 0 };
+      let readyQueue = [...cfg.Order];
+      let blockedQueue = [];
+      let finishedList = [];
+      const bursts = [];
+      const fullCombined = [];
+
+      while (readyQueue.length > 0) {
+        const proc = readyQueue.shift();
+        const seq = traces[proc];
+        const startIdx = idx[proc];
+        const rem = seq.length - startIdx;
+        const take = Math.min(cfg.quota, rem);
+        const executed = seq.slice(startIdx, startIdx + take);
+        idx[proc] += take;
+
+        let reason = '';
+        let nextState = '';
+        const lastIns = executed[executed.length - 1];
+
+        if (ioMap[proc] && lastIns === ioMap[proc]) {
+          reason = 'IO'; // Operación de E/S o llamada al sistema
+          nextState = 'Bloqueado';
+          blockedQueue.push(proc);
+        } else if (idx[proc] >= seq.length) {
+          if (take === cfg.quota) {
+            // En el ejercicio 3.6 de UNIR (pág 36), cuando C ejecuta sus últimas 5 (1605..1609) termina la traza sin más procesos
+            reason = (readyQueue.length === 0) ? 'FIN' : 'CUOTA';
+          } else {
+            reason = 'FIN';
+          }
+          nextState = 'Finalizado';
+          finishedList.push(proc);
+        } else {
+          reason = 'CUOTA'; // Agotamiento de cuota (5 instrucciones)
+          nextState = 'Listo';
+          readyQueue.push(proc);
+        }
+
+        const hasMoreProcesses = readyQueue.length > 0;
+        fullCombined.push(...executed);
+        if (hasMoreProcesses) {
+          fullCombined.push(...cfg.disp);
+        }
+
+        bursts.push({
+          proc,
+          executed,
+          nextPC: idx[proc] < seq.length ? seq[idx[proc]] : 'FIN',
+          reason,
+          nextState,
+          readyAfter: [...readyQueue],
+          blockedAfter: [...blockedQueue],
+          finishedAfter: [...finishedList],
+          dispatcherAdded: hasMoreProcesses ? [...cfg.disp] : []
+        });
+      }
+
+      return {
+        ...cfg,
+        traces,
+        ioMap,
+        bursts,
+        fullCombined
+      };
+    }
+
+    const ALL_EXERCISES = RAW_EXERCISES.map(buildSolvedExercise);
+    let deckIndices = [];
+    let deckPointer = 0;
+    let currentEx = null;
+    let currentStage = 1;
+    let lives = 3;
+
+    // Estado de selección del usuario en cada etapa
+    let userState = {};
+
+    function shuffleDeck() {
+      deckIndices = Array.from({ length: ALL_EXERCISES.length }, (_, i) => i);
+      for (let i = deckIndices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deckIndices[i], deckIndices[j]] = [deckIndices[j], deckIndices[i]];
+      }
+      deckPointer = 0;
+    }
+
+    function loadCurrentExercise() {
+      if (deckPointer >= deckIndices.length) {
+        shuffleDeck();
+      }
+      currentEx = ALL_EXERCISES[deckIndices[deckPointer]];
+      currentStage = 1;
+      userState = {
+        s1_order: null,
+        s1_quota: null,
+        s2_proc: null,
+        s2_ins: [],
+        s3_reason: null,
+        s4_disp: null,
+        s5_queueAction: null,
+        s5_finalTrace: null
+      };
+      updateHUD();
+      renderExerciseProblem();
+      renderStageScreen();
+    }
+
+    function nextRandomExercise() {
+      deckPointer++;
+      loadCurrentExercise();
+    }
+
+    function updateHUD() {
+      document.getElementById('livesDisplay').textContent = '❤️'.repeat(lives) + '🖤'.repeat(Math.max(0, 3 - lives));
+      document.getElementById('exCounterBadge').textContent = `Ej. ${deckPointer + 1} / 20 (#${currentEx.id})`;
+      document.getElementById('exTitleLabel').textContent = currentEx.title;
+
+      const pills = document.querySelectorAll('#stageStepper .step-pill');
+      pills.forEach((p, idx) => {
+        const st = idx + 1;
+        p.classList.remove('current', 'done');
+        if (st === currentStage) p.classList.add('current');
+        else if (st < currentStage) p.classList.add('done');
+      });
+    }
+
+    function renderExerciseProblem() {
+      const orderStr = currentEx.Order.join(' → ');
+      const ioNotes = [];
+      ['A', 'B', 'C'].forEach(p => {
+        if (currentEx.ioMap[p]) ioNotes.push(`el Proceso ${p} invoca E/S en ${currentEx.ioMap[p]}`);
+      });
+      const ioText = ioNotes.length ? ` Nota: ${ioNotes.join('; ')}.` : '';
+
+      document.getElementById('exStatementText').innerHTML =
+        `Cola de Listos inicial: <strong>${orderStr}</strong>. Límite consecutivo (cuanto): <strong>${currentEx.quota} instrucciones</strong>. El activador (dispatcher) ejecuta <strong>3 instrucciones (100, 101, 102)</strong> en cada cambio de proceso.${ioText}`;
+
+      const grid = document.getElementById('exTracesGrid');
+      const colors = { A: 'var(--cyan)', B: 'var(--amber)', C: 'var(--green)' };
+      grid.innerHTML = ['A', 'B', 'C'].map(proc => {
+        const list = currentEx.traces[proc].map(ins => {
+          const isIO = currentEx.ioMap[proc] === ins;
+          return `<div class="ins-item ${isIO ? 'io-ins' : ''}"><span>${ins}</span><span>${isIO ? 'E/S' : ''}</span></div>`;
+        }).join('');
+        return `
+          <div class="trace-col">
+            <div class="trace-col-header" style="color:${colors[proc]}">Proceso ${proc}</div>
+            ${list}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function jumpToStage(st) {
+      currentStage = st;
+      updateHUD();
+      renderStageScreen();
+    }
+
+    /* ================================================================
+       RENDERIZADO DE LAS 5 PANTALLAS DE RESOLUCIÓN
+       ================================================================ */
+    function renderStageScreen() {
+      const titleEl = document.getElementById('stageTitle');
+      const badgeEl = document.getElementById('stageBadge');
+      const instEl = document.getElementById('stageInstruction');
+      const bodyEl = document.getElementById('stageInteractiveBody');
+      const fbEl = document.getElementById('stageFeedback');
+      fbEl.className = 'feedback-banner';
+      fbEl.style.display = 'none';
+
+      badgeEl.textContent = `Pantalla ${currentStage} de 5`;
+      const firstBurst = currentEx.bursts[0];
+
+      if (currentStage === 1) {
+        titleEl.textContent = '1️⃣ Estado y Condiciones Iniciales';
+        instEl.textContent = 'Registra los Contadores de Programa (PC) iniciales de cada proceso, el orden de la Cola de Listos y los límites del sistema (cuanto y activador):';
+
+        const correctOrder = currentEx.Order.join(' → ');
+        const wrongOrders = ['A → B → C', 'B → C → A', 'C → A → B', 'A → C → B'].filter(o => o !== correctOrder).slice(0, 2);
+        const orderOptions = [correctOrder, ...wrongOrders].sort();
+
+        bodyEl.innerHTML = `
+          <div class="queues-box">
+            <div style="font-size:0.78rem;font-weight:700;color:var(--cyan);">Contadores de Programa (PC) Iniciales:</div>
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;">
+              <span>PC(A) = <strong>${currentEx.aStart}</strong> (${currentEx.aLen} inst.)</span>
+              <span>PC(B) = <strong>${currentEx.bStart}</strong> (${currentEx.bLen} inst.)</span>
+              <span>PC(C) = <strong>${currentEx.cStart}</strong> (${currentEx.cLen} inst.)</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Selecciona el orden inicial de la Cola de Listos:</label>
+            <div class="choice-list">
+              ${orderOptions.map(opt => `
+                <button class="choice-btn ${userState.s1_order === opt ? 'selected' : ''}" onclick="userState.s1_order='${opt}';renderStageScreen()">
+                  <span>Cola FIFO: <strong>${opt}</strong></span>
+                  <span>${userState.s1_order === opt ? '●' : '○'}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Selecciona el límite de cuota y sobrecarga del Activador:</label>
+            <div class="choice-list">
+              <button class="choice-btn ${userState.s1_quota === '5_100' ? 'selected' : ''}" onclick="userState.s1_quota='5_100';renderStageScreen()">
+                <span>Cuota = <strong>5 inst.</strong> | Activador = <strong>100, 101, 102</strong> (3 inst.)</span>
+                <span>${userState.s1_quota === '5_100' ? '●' : '○'}</span>
+              </button>
+              <button class="choice-btn ${userState.s1_quota === '6_100' ? 'selected' : ''}" onclick="userState.s1_quota='6_100';renderStageScreen()">
+                <span>Cuota = 8 inst. | Activador = Sin sobrecarga (0 inst.)</span>
+                <span>${userState.s1_quota === '6_100' ? '●' : '○'}</span>
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (currentStage === 2) {
+        titleEl.textContent = '2️⃣ Seleccionar Proceso Activo y Ejecutar';
+        instEl.textContent = 'Desencola el primer proceso de la Cola de Listos y emite sus instrucciones hacia la traza combinada actualizando su PC instrucción a instrucción:';
+
+        const p = firstBurst.proc;
+        const allInsOfP = currentEx.traces[p];
+
+        bodyEl.innerHTML = `
+          <div class="form-group">
+            <label class="form-label">1. ¿Qué proceso sale primero de la Cola de Listos (${currentEx.Order.join(' → ')}) a Ejecutando?</label>
+            <div class="segmented three">
+              ${['A', 'B', 'C'].map(proc => `
+                <button class="seg-btn ${userState.s2_proc === proc ? 'active' : ''}" onclick="userState.s2_proc='${proc}';userState.s2_ins=[];renderStageScreen()">
+                  Proceso ${proc}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">2. Toca las instrucciones que ejecuta el Proceso ${userState.s2_proc || '?'} en esta primera ráfaga (máx. 5 o hasta E/S o fin):</label>
+            <div class="chip-pool">
+              ${(userState.s2_proc ? currentEx.traces[userState.s2_proc] : allInsOfP).map(ins => {
+                const sel = userState.s2_ins.includes(ins);
+                return `<button class="ins-chip ${sel ? 'selected' : ''}" onclick="toggleS2Ins(${ins})">${ins}</button>`;
+              }).join('')}
+            </div>
+          </div>
+          <div class="queues-box">
+            <span style="font-size:0.75rem;color:var(--text-muted);">Traza emitida en Etapa 2 (${userState.s2_ins.length} inst. | PC siguiente: ${getNextPCPreview()}):</span>
+            <div class="combined-preview">
+              ${userState.s2_ins.length ? userState.s2_ins.map(i => `<span class="proc-pill pill-${userState.s2_proc || 'A'}">${i}</span>`).join('') : '<span class="muted">Ninguna instrucción seleccionada aún...</span>'}
+            </div>
+          </div>
+        `;
+      } else if (currentStage === 3) {
+        titleEl.textContent = '3️⃣ Detectar Condición de Desalojo / Salida';
+        instEl.textContent = `Tras ejecutar [${firstBurst.executed.join(', ')}] del Proceso ${firstBurst.proc}, evalúa qué evento interrumpe o finaliza esta ráfaga:`;
+
+        const reasons = [
+          { key: 'CUOTA', label: '⏱️ Agotamiento de cuota (Alcanzó las 5 instrucciones consecutivas permitidas)' },
+          { key: 'IO', label: '💿 Operación de E/S o llamada al sistema (El proceso solicita un recurso y se bloquea)' },
+          { key: 'FIN', label: '🏁 Fin de traza (El proceso completó todas sus instrucciones antes de agotar la cuota)' }
+        ];
+
+        bodyEl.innerHTML = `
+          <div class="queues-box">
+            <div style="font-size:0.8rem;">Proceso en CPU: <strong>Proceso ${firstBurst.proc}</strong> · Instrucciones ejecutadas: <strong>${firstBurst.executed.length}</strong> (${firstBurst.executed[0]}..${firstBurst.executed[firstBurst.executed.length - 1]})</div>
+          </div>
+          <div class="choice-list">
+            ${reasons.map(r => `
+              <button class="choice-btn ${userState.s3_reason === r.key ? 'selected' : ''}" onclick="userState.s3_reason='${r.key}';renderStageScreen()">
+                <span>${r.label}</span>
+                <span>${userState.s3_reason === r.key ? '●' : '○'}</span>
+              </button>
+            `).join('')}
+          </div>
+        `;
+      } else if (currentStage === 4) {
+        titleEl.textContent = '4️⃣ Intercalar la Traza del Activador';
+        instEl.textContent = 'Al ocurrir el desalojo, el procesador pasa a Modo Kernel e inserta en la traza combinada las instrucciones fijas del Activador (Dispatcher) para el cambio de contexto:';
+
+        const opts = [
+          { key: '100_101_102', label: 'Insertar traza del Activador: 100, 101, 102 (3 instrucciones del núcleo)' },
+          { key: 'NONE', label: 'No insertar ninguna instrucción del activador entre procesos' },
+          { key: '999', label: 'Insertar solo 1 instrucción (100)' }
+        ];
+
+        bodyEl.innerHTML = `
+          <div class="queues-box">
+            <span style="font-size:0.75rem;color:var(--text-muted);">Vista previa de la Traza Combinada (Ráfaga 1 + Dispatcher):</span>
+            <div class="combined-preview">
+              ${firstBurst.executed.map(i => `<span class="proc-pill pill-${firstBurst.proc}">${i}</span>`).join('')}
+              ${userState.s4_disp === '100_101_102' ? `<span class="proc-pill pill-OS">100</span><span class="proc-pill pill-OS">101</span><span class="proc-pill pill-OS">102</span>` : ''}
+            </div>
+          </div>
+          <div class="choice-list">
+            ${opts.map(o => `
+              <button class="choice-btn ${userState.s4_disp === o.key ? 'selected' : ''}" onclick="userState.s4_disp='${o.key}';renderStageScreen()">
+                <span>${o.label}</span>
+                <span>${userState.s4_disp === o.key ? '●' : '○'}</span>
+              </button>
+            `).join('')}
+          </div>
+        `;
+      } else if (currentStage === 5) {
+        titleEl.textContent = '5️⃣ Actualizar Colas y Completar el Ciclo';
+        instEl.textContent = `Coloca al Proceso ${firstBurst.proc} en la cola correspondiente tras su desalojo y verifica la traza combinada completa hasta que todos los procesos terminen:`;
+
+        const qCorrect = `${firstBurst.nextState}|${firstBurst.readyAfter.join(',')}`;
+        const qOptions = [
+          {
+            key: qCorrect,
+            label: `Proceso ${firstBurst.proc} pasa a ${firstBurst.nextState.toUpperCase()} · Nueva Cola de Listos: [${firstBurst.readyAfter.join(' → ') || 'Vacía'}]`
+          },
+          {
+            key: 'WRONG_1',
+            label: `Proceso ${firstBurst.proc} vuelve al principio de la Cola de Listos inmediatamente`
+          },
+          {
+            key: 'WRONG_2',
+            label: `Proceso ${firstBurst.proc} se descarta sin actualizar el PCB`
+          }
+        ];
+
+        bodyEl.innerHTML = `
+          <div class="form-group">
+            <label class="form-label">1. ¿Cómo quedan las colas tras desalojar al Proceso ${firstBurst.proc}?</label>
+            <div class="choice-list">
+              ${qOptions.map(o => `
+                <button class="choice-btn ${userState.s5_queueAction === o.key ? 'selected' : ''}" onclick="userState.s5_queueAction='${o.key}';renderStageScreen()">
+                  <span>${o.label}</span>
+                  <span>${userState.s5_queueAction === o.key ? '●' : '○'}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="queues-box">
+            <strong style="font-size:0.8rem;color:var(--cyan);">🔄 Resumen de todos los Ciclos hasta completar la Traza:</strong>
+            ${currentEx.bursts.map((b, idx) => `
+              <div style="font-size:0.74rem;border-top:1px solid var(--border);padding-top:0.3rem;">
+                <strong>Ciclo ${idx + 1} (Proc. ${b.proc}):</strong> ejecuta <code>${b.executed[0]}..${b.executed[b.executed.length - 1]}</code>
+                → <em>${b.reason === 'CUOTA' ? 'Agota cuota (5)' : b.reason === 'IO' ? 'Petición E/S' : 'Fin de traza'}</em> (${b.nextState})
+                ${b.dispatcherAdded.length ? `→ Activador <code>100, 101, 102</code>` : '→ Fin total'}
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="queues-box">
+            <strong style="font-size:0.78rem;color:var(--green);">✅ Traza Combinada Completa (${currentEx.fullCombined.length} instrucciones):</strong>
+            <div class="combined-preview">
+              ${currentEx.fullCombined.map(ins => {
+                let cls = 'pill-OS';
+                if (currentEx.traces.A.includes(ins)) cls = 'pill-A';
+                else if (currentEx.traces.B.includes(ins)) cls = 'pill-B';
+                else if (currentEx.traces.C.includes(ins)) cls = 'pill-C';
+                return `<span class="proc-pill ${cls}">${ins}</span>`;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function toggleS2Ins(ins) {
+      const idx = userState.s2_ins.indexOf(ins);
+      if (idx >= 0) userState.s2_ins.splice(idx, 1);
+      else userState.s2_ins.push(ins);
+      userState.s2_ins.sort((a, b) => a - b);
+      renderStageScreen();
+    }
+
+    function getNextPCPreview() {
+      if (!userState.s2_proc || userState.s2_ins.length === 0) return '-';
+      const seq = currentEx.traces[userState.s2_proc];
+      const last = userState.s2_ins[userState.s2_ins.length - 1];
+      const pos = seq.indexOf(last);
+      return pos + 1 < seq.length ? seq[pos + 1] : 'FIN';
+    }
+
+    /* ================================================================
+       VALIDACIÓN Y BOTÓN "DAR RESPUESTA" POR ETAPA
+       ================================================================ */
+    function showFeedback(ok, msg) {
+      const fb = document.getElementById('stageFeedback');
+      fb.className = 'feedback-banner ' + (ok ? 'ok' : 'err');
+      fb.textContent = msg;
+      fb.style.display = 'block';
+    }
+
+    function penalizeLife(msg) {
+      lives = Math.max(0, lives - 1);
+      updateHUD();
+      if (lives === 0) {
+        showFeedback(false, `💔 ¡Has agotado las 3 vidas! ${msg} Pulsa "💡 Dar Respuesta" o se restaurarán tus 3 vidas.`);
+        lives = 3;
+      } else {
+        showFeedback(false, `${msg} (Pierdes 1 vida · Te quedan ${lives} ❤️)`);
+      }
+    }
+
+    function verifyCurrentStage() {
+      const firstBurst = currentEx.bursts[0];
+
+      if (currentStage === 1) {
+        const expectedOrder = currentEx.Order.join(' → ');
+        if (userState.s1_order === expectedOrder && userState.s1_quota === '5_100') {
+          showFeedback(true, '¡Correcto! Condiciones iniciales registradas. Pasando a la Etapa 2...');
+          setTimeout(() => jumpToStage(2), 700);
+        } else {
+          penalizeLife('Revisa el orden inicial de la cola de listos o los límites de cuota (5) y activador (100, 101, 102).');
+        }
+      } else if (currentStage === 2) {
+        const expectedProc = firstBurst.proc;
+        const expectedIns = firstBurst.executed.join(',');
+        const userIns = userState.s2_ins.join(',');
+        if (userState.s2_proc === expectedProc && userIns === expectedIns) {
+          showFeedback(true, `¡Exacto! El Proceso ${expectedProc} ejecuta [${expectedIns}]. Pasando a la Etapa 3...`);
+          setTimeout(() => jumpToStage(3), 700);
+        } else {
+          penalizeLife(`El primer proceso en la cola es ${expectedProc} y debe ejecutar exactamente [${firstBurst.executed.join(', ')}].`);
+        }
+      } else if (currentStage === 3) {
+        if (userState.s3_reason === firstBurst.reason) {
+          showFeedback(true, '¡Condición de desalojo identificada correctamente! Pasando a la Etapa 4...');
+          setTimeout(() => jumpToStage(4), 700);
+        } else {
+          penalizeLife('Esa no es la causa por la que el proceso abandona la CPU en esta ráfaga.');
+        }
+      } else if (currentStage === 4) {
+        if (userState.s4_disp === '100_101_102') {
+          showFeedback(true, '¡Correcto! Se intercalan las instrucciones 100, 101, 102 del Activador. Pasando a la Etapa 5...');
+          setTimeout(() => jumpToStage(5), 700);
+        } else {
+          penalizeLife('Recuerda que el Activador (dispatcher) siempre ejecuta las 3 instrucciones del núcleo: 100, 101, 102.');
+        }
+      } else if (currentStage === 5) {
+        const qCorrect = `${firstBurst.nextState}|${firstBurst.readyAfter.join(',')}`;
+        if (userState.s5_queueAction === qCorrect) {
+          showFeedback(true, '🎉 ¡Ejercicio completado con éxito! Cargando el siguiente ejercicio aleatorio...');
+          setTimeout(() => nextRandomExercise(), 1300);
+        } else {
+          penalizeLife(`Revisa a qué cola pasa el Proceso ${firstBurst.proc} tras el desalojo.`);
+        }
+      }
+    }
+
+    function giveStepAnswer() {
+      const firstBurst = currentEx.bursts[0];
+      if (currentStage === 1) {
+        userState.s1_order = currentEx.Order.join(' → ');
+        userState.s1_quota = '5_100';
+        renderStageScreen();
+        showFeedback(true, `💡 Respuesta aplicada: Cola inicial ${userState.s1_order}, cuota de 5 instrucciones y activador 100, 101, 102.`);
+      } else if (currentStage === 2) {
+        userState.s2_proc = firstBurst.proc;
+        userState.s2_ins = [...firstBurst.executed];
+        renderStageScreen();
+        showFeedback(true, `💡 Respuesta aplicada: Se desencola el Proceso ${firstBurst.proc} y ejecuta [${firstBurst.executed.join(', ')}].`);
+      } else if (currentStage === 3) {
+        userState.s3_reason = firstBurst.reason;
+        renderStageScreen();
+        const reasonText = firstBurst.reason === 'CUOTA'
+          ? 'Agotamiento de cuota (5 instrucciones consecutivas)'
+          : firstBurst.reason === 'IO'
+            ? 'Petición de E/S (el proceso pasa a Bloqueado)'
+            : 'Fin de traza del proceso';
+        showFeedback(true, `💡 Respuesta aplicada: ${reasonText}.`);
+      } else if (currentStage === 4) {
+        userState.s4_disp = '100_101_102';
+        renderStageScreen();
+        showFeedback(true, '💡 Respuesta aplicada: Se intercalan las instrucciones 100, 101, 102 del Activador (Dispatcher).');
+      } else if (currentStage === 5) {
+        userState.s5_queueAction = `${firstBurst.nextState}|${firstBurst.readyAfter.join(',')}`;
+        renderStageScreen();
+        showFeedback(true, `💡 Respuesta aplicada: El Proceso ${firstBurst.proc} pasa a ${firstBurst.nextState} y la Cola de Listos queda [${firstBurst.readyAfter.join(' → ')}].`);
+      }
+    }
+
+    // Inicializar baraja aleatoria de 20 ejercicios al arrancar
+    shuffleDeck();
+    loadCurrentExercise();
+  </script>
+</body>
+</html>
